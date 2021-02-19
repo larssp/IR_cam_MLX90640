@@ -1,5 +1,5 @@
 [submodule "res/pinouts/esp23devkit"]
-	path = res/pinouts/esp23devkit
+	path = res/esp32/pinout
 	url = https://github.com/playelek/pinout-doit-32devkitv1
 [submodule "sketch/mlx90640-library"]
 	path = sketch/mlx90640-library
