@@ -1,0 +1,3 @@
+[submodule "res/pinouts/esp23devkit"]
+	path = res/pinouts/esp23devkit
+	url = https://github.com/playelek/pinout-doit-32devkitv1
