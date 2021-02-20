@@ -7,3 +7,6 @@
 [submodule "sketch/SparkFun_MLX90640_Arduino_Example"]
 	path = sketch/SparkFun_MLX90640_Arduino_Example
 	url = https://github.com/sparkfun/SparkFun_MLX90640_Arduino_Example
+[submodule "sketch/demo_ili9341_with_esp32"]
+	path = sketch/demo_ili9341_with_esp32
+	url = https://github.com/MartyMacGyver/ESP32_Adafruit_ILI9341
