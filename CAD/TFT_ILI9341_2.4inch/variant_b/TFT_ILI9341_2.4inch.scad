@@ -32,24 +32,32 @@
      // Pins
      translate([-29, -33, 0])
      {
-         pin(0,0*2.54,"J3");
+         color("White", 1.0)
+         {
+             translate([55,44,-0.51]) rotate([180,0,0]) text("J1", size=2);
+             translate([55,-2,-0.51]) rotate([180,0,0]) text("J2", size=2);
+             translate([-1,-2,-0.51]) rotate([180,0,0]) text("J3", size=2);
+             translate([-1,35,-0.51]) rotate([180,0,0]) text("J4", size=2);
+         }
+         
+         pin(0,0*2.54,"n/c");
          pin(0,1*2.54,"LCD_RST");
-         pin(0,2*2.54,"LCD_CS");
-         pin(0,3*2.54,"LCD_RS");
+         pin(0,2*2.54,"LCD_CS / Touch X-");
+         pin(0,3*2.54,"LCD_RS / Touch Y+");
          pin(0,4*2.54,"LCD_WR");
          pin(0,5*2.54,"LCD_RD");
          
-         pin(0,7*2.54,"J4");
+         pin(0,7*2.54,"n/c");
          pin(0,8*2.54,"GND");
-         pin(0,9*2.54,"");
+         pin(0,9*2.54,"GND");
          pin(0,10*2.54,"5V");
          pin(0,11*2.54,"3V3");
-         pin(0,12*2.54,"");
+         pin(0,12*2.54,"K1");
          
          translate([56.86, 0, 0])
          {
-             pin(0,0*2.54,"J2",true);
-             pin(0,1*2.54,"",true);
+             pin(0,0*2.54,"n/c",true);
+             pin(0,1*2.54,"n/c",true);
              pin(0,2*2.54,"LCD_D2",true);
              pin(0,3*2.54,"LCD_D3",true);
              pin(0,4*2.54,"LCD_D4",true);
@@ -59,14 +67,14 @@
              
              translate([0, -1.016, 0]) // famous arduino header spacing error
              {
-                 pin(0,9*2.54,"LCD_D0",true);
-                 pin(0,10*2.54,"LCD_D1",true);
+                 pin(0,9*2.54,"Touch Y- / LCD_D0",true);
+                 pin(0,10*2.54,"Touch X+ / LCD_D1",true);
                  pin(0,11*2.54,"SD_SS",true);
                  pin(0,12*2.54,"SD_DI",true);
                  pin(0,13*2.54,"SD_DO",true);
                  pin(0,14*2.54,"SD_SCK",true);
-                 pin(0,15*2.54,"",true);
-                 pin(0,16*2.54,"J1",true);
+                 pin(0,15*2.54,"n/c",true);
+                 pin(0,16*2.54,"n/c",true);
              }
          }
      }
@@ -106,8 +114,8 @@
         color("Black", 1.0)     translate([0, 0, -1-2.54/2])     cube([2.54,2.54,2.54], center=true); 
         color("Red", 0.5)       translate([0, 0, -7.3])          cube([3,3,20], center=true);
          
-        if (mirror) color("White", 1.0) translate([-13,1,-0.51]) rotate([180,0,0]) text(desc, size=2);
-        else        color("White", 1.0) translate([2,1,-0.51])   rotate([180,0,0]) text(desc, size=2);
+        if (mirror) color("White", 1.0) translate([-2,1,-0.51]) rotate([180,0,0]) text(desc, size=1.5, halign="right");
+        else        color("White", 1.0) translate([2,1,-0.51])   rotate([180,0,0]) text(desc, size=1.5);
          
      }
  }
