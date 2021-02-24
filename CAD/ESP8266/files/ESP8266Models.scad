@@ -1801,6 +1801,184 @@ module NodeMCU(pins=0, atorg=0, showtext=true, phmc="Yellow", phfc="DarkGrey") {
     }
 }
 
+// --- NodeMCU-ESP32 ESP32 DEVKITV1  HW463 ----------------------------
+module NodeMCU_HW463(pins=0, atorg=0, showtext=true, phmc="Yellow", phfc="DarkGrey") {
+   
+    // Pins:
+    //  0: No pins
+    //  1: Male headers under
+    //  2: Male headers over
+    //  3: Female headers under
+    //  4: Female headers over
+    //
+    // atorg:
+    //  0: Alignement on device's center
+    //  1: PCB is aligned over XY plane, border onver the X and Y axis
+    //  2: PCB is aligned over XY plane, with the lower left pin on XY origins
+
+    XDim = 28.75;   // total pcb width
+    YDim = 52.0;    // total pcb height
+    ZDim = 1.6;     // pcb thickness (without components)
+    HD  = 2.85;     // mounting hole diameter
+    HXO = 2.5;      // distance between mounting hole center and pcb edge 
+    HYO = 2.675;    // distance between mounting hole center and pcb edge 
+    BCR = 2.75;     // radius at pcb corners
+    SCR = 0.8;      // ???
+    CCA = 0;        // ???
+    P1X = (XDim-10*2.54)/2;   // distance of pin from pcb border
+    P1Y = 15.56;  // location of pin1 
+    USBYC = 1.1;  // ???
+    USBYO = 0.6;  // Y location of USB port. It is almost flush due to a recess
+    USBXC = 7.7;  // ???
+    PBXO = 8;   // half distance between EN and BOOT Button
+    PBYO = 4;   // distance from pcb edge to button in Y direction
+    LUXO = 19.4;
+    LUYO = 29.85;
+    LAXO = 18.75;
+    LAYO = 29.85;
+
+    NMCUMPRT = [
+     [ "Vin","Gnd","D13","D12","D14","D27","D26","D25","D33","D32","D35","D34","VN","VP","EN" ],
+     [ "3V3","Gnd","D15","D2","D4","RX2","TX2","D5","D18","D19","D21","RX0","TX0","D22","D23" ],
+    ];
+
+    ORGV = [
+    // 0: Alignement on device's center
+    [0, 0, 0],
+    //  1: PCB is aligned over XY plane, border onver the X and Y axis
+    [XDim/2, YDim/2, ZDim/2],
+    //  2: PCB is aligned over XY plane, with the lower left pin on XY origins
+    [XDim/2-P1X, P1Y, ZDim/2],
+    ]    ;
+    
+    translate([ORGV[atorg][0], ORGV[atorg][1], ORGV[atorg][2]]) {
+        // PCB
+        color("DarkSlateGray")
+        difference() {
+            cube([XDim, YDim, ZDim], center=true);
+            translate([-XDim/2, YDim/2,0])
+            rotate([0,0,-90])
+                edge(BCR, ZDim+0.2);
+            translate([XDim/2, YDim/2,0])
+            rotate([0,0,180])
+                edge(BCR, ZDim+0.2);
+            translate([XDim/2, -YDim/2,0])
+            rotate([0,0,90])
+                edge(BCR, ZDim+0.2);
+            translate([-XDim/2, -YDim/2,0])
+            rotate([0,0,0])
+                edge(BCR, ZDim+0.2);
+            
+            translate([-XDim/2+HXO, YDim/2-HYO,0])
+                cylinder(d=HD, h=ZDim*2, center=true);
+            translate([XDim/2-HXO, YDim/2-HYO,0])
+                cylinder(d=HD, h=ZDim*2, center=true);
+            translate([-XDim/2+HXO, -YDim/2+HYO,0])
+                cylinder(d=HD, h=ZDim*2, center=true);
+            translate([XDim/2-HXO, -YDim/2+HYO,0])
+                cylinder(d=HD, h=ZDim*2, center=true);
+            
+            if (pins==0)
+                for (i=[-1:2:1])
+                    translate([i*(XDim/2-P1X), -P1Y, 0])
+                        PINHEADHOLES(n=15);
+            
+        }
+        // Top layer
+        translate([0, 0, ZDim/2]) {
+            // Micro USB connector
+            rotate([0,0,180])
+            translate([0, YDim/2-USBYO, 0])
+                mUSBF();
+
+            // ESP12F
+            translate([0, YDim/2, 0])
+                ESP12F();
+
+             // Texts
+             if (showtext) color("White")
+             {
+                for (i=[0:1:1])
+                for (j=[0:1:14])
+                translate([(i*2-1)*(XDim/2-P1X-0.5), j*2.54-P1Y, 0])
+                    linear_extrude(height=0.001, center=true, convexity=10)
+                        text(NMCUMPRT[i][j], size=1.0, font="Arial:style=Regular", halign=i?"right":"left", valign="center");
+                
+                translate([PBXO-2, -YDim/2+PBYO-2, 0]) rotate([0,0,90])
+                linear_extrude(height=0.001, center=true, convexity=10)
+                        text("BOOT", size=1.0, font="Arial:style=Regular", valign="center");
+                translate([-PBXO+2, -YDim/2+PBYO-1, 0]) rotate([0,0,90])
+                linear_extrude(height=0.001, center=true, convexity=10)
+                        text("EN", size=1.0, font="Arial:style=Regular", valign="center");
+                
+                translate([0, -YDim/4, 0]) rotate([0,0,90])
+                linear_extrude(height=0.001, center=true, convexity=10)
+                        text("HW-463", size=1.0, font="Arial:style=Regular", valign="center");
+                
+                translate([0, YDim/2-10, 3.2]) 
+                linear_extrude(height=0.001, center=true, convexity=10)
+                {
+                        text("ESPRESSIf", size=1.0, font="Arial:style=Regular", halign="center");
+                    translate([0, -1.5, 3.5]) text("ESP32-WROOM-32D", size=0.8, font="Arial:style=Regular", halign="center");
+                }
+            }
+
+            // Pins
+            if (pins==2)
+                for (i=[-1:2:1])
+                    translate([i*(XDim/2-P1X), -P1Y, 0])
+                        PINHEADM(n=15, col=phmc);
+
+            if (pins==4)
+                for (i=[-1:2:1])
+                    translate([i*(XDim/2-P1X), -P1Y, 0])
+                        PINHEADF(n=15, col=phfc);
+
+                // Push buttons
+                translate([PBXO-2.8/2, PBYO-YDim/2, 0])
+                rotate([90,0,90])
+                    translate([0, 1.6, 0])
+                        PUSHBS(XDim = 4.0, YDim = 1.6, ZDim = 2.8, BXDim = 2.0, BYDim = 0.8, BZDim = 2.0);
+                translate([-PBXO-2.8/2, PBYO-YDim/2, 0])
+                rotate([90,0,90])
+                    translate([0, 1.6, 0])
+                        PUSHBS(XDim = 4.0, YDim = 1.6, ZDim = 2.8, BXDim = 2.0, BYDim = 0.8, BZDim = 2.0);
+                
+            // LEDs
+            // Activity LED
+            color("Red", 0.7)
+            translate([XDim/2-LAXO, YDim/2-LAYO, (ZDim+0.58)/2])
+                cube([0.80, 1.60, 0.58], center=true);
+            // User LED
+            color("Blue", 0.7)
+            translate([LUXO-XDim/2, YDim/2-LUYO, (ZDim+0.58)/2])
+                cube([0.8, 1.60, 0.58], center=true);    
+            
+
+        }
+        // Bottom layer
+        translate([0, 0, -ZDim/2])
+        rotate([0, 180, 0]) {
+
+        if (pins==1)
+            for (i=[-1:2:1])
+                translate([i*(XDim/2-P1X), -P1Y, 0])
+                    PINHEADM(n=15, col=phmc);
+
+        if (pins==3)
+            for (i=[-1:2:1])
+                translate([i*(XDim/2-P1X), -P1Y, 0])
+                    PINHEADF(n=15, col=phfc);
+            
+        if (showtext) color("White") translate([0,0,-0.499])
+             {
+                 text("NodeMCU-ESP32", size=1.0, font="Arial:style=Regular", halign="center");
+                 translate([0,-2,0]) text("ESP32 DEVKITV1", size=1.0, font="Arial:style=Regular", halign="center");
+             }
+        }
+    }
+}
+
 module NodeMCU_USBLocate(atorg=0) {
     // Locates the first children at the center of the USB
     // connector mouth, on the vertical plane of the base
