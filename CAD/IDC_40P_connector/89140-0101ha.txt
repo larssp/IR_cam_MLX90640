@@ -1,0 +1,16 @@
+﻿"Symbol";"Value";"Unit";
+"SUPPLIER_NAME";"RS Components";"";
+"TraceParts.PartVersion";"1.1.2";"";
+"SUPPLIER";"3M";"";
+"TraceParts.PartStatus";"Published";"";
+"TraceParts.PartNumber";"10-25012011-082869";"";
+"TraceParts.PartLanguage";"en";"";
+"DESIGN";"3M 40-Way IDC Connector Socket for Cable Mount, 2-Row";"";
+"TraceParts.InstanceId";"10-25012011-0828692HFQ4LO9GYR6GTLHMNS4U1XFT";"";
+"TraceParts.PartTitle";"3M 40-Way IDC Connector Socket for Cable Mount, 2-Row";"";
+"REFERENCE";"89140-0101HA";"";
+"Buy_Now";"https://uk.rs-online.com/web/p/products/3237946?cm_mmc=en-ds-_-mcad-_-traceparts-_-3237946'";"";
+"TRACEPARTS";"TRACEPARTS";"";
+"TraceParts.PartStatusId";"";"";
+"rs_stock_number";"3237946";"";
+"TraceParts.ClassPath";"RS_COMPONENTS:10-25012011-082869";"";

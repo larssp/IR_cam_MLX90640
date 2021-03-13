@@ -21,3 +21,22 @@
 
 
 Description of the pins copied from [here](https://microcontrollerslab.com/2-4-tft-lcd-touch-screen-module/).
+
+
+## Alternative table from [here](http://www.lcdwiki.com/2.4inch_Arduino_Display)
+
+| Pin Label |	Pin Description |
+|-----------|-------------------|
+| LCD_RST   |	LCD bus reset signal, low level reset |
+| LCD_CS 	| LCD bus chip select signal, low level enable |
+| LCD_RS 	| LCD bus command / data selection signal, low level: command, high level: data |
+| LCD_WR 	| LCD bus write signal | 
+| LCD_RD 	| LCD bus read signal | 
+| GND 	    | Power ground | 
+| 5V 	    | 5V power input | 
+| 3V3 	    | 3.3V power input, this pin can be disconnected | 
+| LCD_D0-LCD_D7  | 	LCD 8-bit data Bit0-Bit7 | 
+| SD_SS 	| SD card SPI bus chip select signal, low level enable | 
+| SD_DI 	| SD card SPI bus MOSI signal | 
+| SD_DO 	| SD card SPI bus MISO signal | 
+| SD_SCK 	| SD card SPI bus clock signal | 

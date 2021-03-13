@@ -1,6 +1,12 @@
 # IR_cam_MLX90640
 DIY Thermo imaging IR camera with the MLX90640
 
+__CAD__ : Dummy geometries of the used components and design files for the final camera casing
+
+__res__ : Resources for the components. Technical data, drawings, etc.
+
+__sketch__ : Sketch project files for the Arduino IDE
+
 
 ## Links to resources and similar projects
 

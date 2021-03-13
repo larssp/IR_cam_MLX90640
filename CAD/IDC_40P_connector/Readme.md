@@ -1,0 +1,1 @@
+Downloaded from [Traceparts](https://www.traceparts.com/en/product/rs-components-3m-40way-idc-connector-socket-for-cable-mount-2row?CatalogPath=TRACEPARTS%3ATP10016001005007&Product=10-25012011-082869&PartNumber=89140-0101HA)
