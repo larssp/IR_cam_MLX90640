@@ -10,3 +10,6 @@
 [submodule "sketch/demo_ili9341_with_esp32"]
 	path = sketch/demo_ili9341_with_esp32
 	url = https://github.com/MartyMacGyver/ESP32_Adafruit_ILI9341
+[submodule "sketch/ESP32-and-how-to-use-ILI9341-TFT-Display"]
+	path = sketch/ESP32-and-how-to-use-ILI9341-TFT-Display
+	url = https://github.com/G6EJD/ESP32-and-how-to-use-ILI9341-TFT-Display.git
