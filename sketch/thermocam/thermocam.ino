@@ -6,34 +6,37 @@
 *   ILI9341                   - TFT touch display
 *   
 *
-*   The code is based on
-*   https://www.instructables.com/Infrared-Thermal-Imaging-Camera-With-MLX90640-and-/
 *
 */
 
 // ==================================
 // ==== includes and definitions ==== 
 // ==================================
+#include <Arduino.h>
 #include <Wire.h>
 #include "SPI.h"
 
 // ==== tft display related =========
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
-// For the ESP-WROVER_KIT, these are the default pins.
-#define TFT_CS   15 
-#define TFT_DC    2
-#define TFT_MOSI 13
-#define TFT_CLK  14
-#define TFT_RST  26
-#define TFT_MISO 12
-#define TFT_LED  27
 
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+#define TFT_LED   1
+// USE VSPI pins via hardware SPI
+#define TFT_CS   17 
+#define TFT_DC   16
+#define TFT_RST   5
+
+#define TFT_MOSI 23 // just for reference, this variable is not used
+#define TFT_CLK  18 // just for reference, this variable is not used
+#define TFT_MISO 19 // just for reference, this variable is not used
+
+// Use hardware SPI
+// CS, DC and RST can be chosen freely. 
+// The hardware SPI pins (VSPI) are known by the Arduino IDE.
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 
 // colormap array
-// uint16_t colormap[8][256]
-#include "colormaps.cpp"
+#include "colormaps.h"
 
 // ==== ir sensor related ===========
 #include "MLX90640_API.h"
@@ -46,7 +49,7 @@ static float mlx90640To[768];                               // 1D-array holding 
 paramsMLX90640 mlx90640;
 
 // reinterpret the 1D temperature array as a 2D 32*24 array
-static float (&mlx90640To2D)[32][24] = reinterpret_cast<static float (&)[32][24]>(mlx90640To);
+//static float (&mlx90640To2D)[32][24] = reinterpret_cast<static float (&)[32][24]>(mlx90640To);
 
 // ==== variables
 // sensor refresh rate. set one of the following:
@@ -68,7 +71,13 @@ bool mode_auto_scale = true;
 int  mode_colormap = 0;
 
 // important temperature readings
-float T_max, T_min, T_center
+float T_max = 0.0;
+float T_min = 0.0;
+float T_center = 0.0;
+float T_probe = 0.0;
+
+unsigned long t_loop = 0;
+float fps_value = 0.0;
 
 
 // ==================================
@@ -118,10 +127,12 @@ void setup()
     pinMode(TFT_LED, OUTPUT);
     digitalWrite(TFT_LED, HIGH);
     tft.begin();
-    tft.setRotation(1);
+    tft.setRotation(3);
 
     // draw the default GUI
     draw_gui();
+
+    t_loop = millis();
 }
 
 
@@ -155,22 +166,32 @@ void loop()
     // e.g.
     // mlx90640To2d[3,15] = 0.25 * (mlx90640To2d[2][15] + mlx90640To2d[4][15] + mlx90640To2d[3][14] + mlx90640To2d[3][16]);
     
-    T_max = maximum(mlx90640To);
-    T_min = minimum(mlx90640To);
+    find_T_minmax();
 
     // Postprocessing and display
     if (mode_interp == 0) 
     {
-        PP_not_interpolated(mlx90640To2D);
+        PP_not_interpolated();
+        //PP_not_interpolated(mlx90640To2D);
     }
     else
     {
-        PP_interpolated(mlx90640To2D);
+        //PP_interpolated(mlx90640To2D);
     }
 
     // user interaction (touch display)
 
+    // update parts of gui
+    draw_crosshair();
+    draw_scale_min_max();
+    draw_value_center();
+    draw_value_hotspot();
 
+    fps_value = 1000.0/(millis() - t_loop);
+    t_loop = millis();
+    draw_fps();
+    
+    
     delay(20);
 }
 
@@ -198,37 +219,15 @@ boolean isConnected()
 
 
 // ==================================
-// ==== post processing =============
-// ==================================
-
-void PP_not_interpolated(const float T)
-{
-    T_center = 0.25 * (T[16][12] + T[17][12] + T[16][13] + T[17][13]); 
-
-    for (int i = 0; i < 24 ; i++)
-    {
-        for (int j = 0; j < 32; j++)
-        {
-            int magnitude = (int) 256.0 * (T[i][j] - T_min)/(T_max - T_min);
-            tft.fillRect(j*8, i*8, 8, 8, colormap[mode_colormap][magnitude])
-        }
-    }
-
-    // draw white crosshair in center
-    tft.drawLine(128, 93, 128, 100, ILI9341_WHITE);
-    tft.drawLine(129, 93, 129, 100, ILI9341_WHITE);
-    tft.drawLine(125, 96, 132,  96, ILI9341_WHITE);
-    tft.drawLine(125, 97, 132,  97, ILI9341_WHITE);
-}
-
-// ==================================
-// ==== graphic routines ============
+// ==== gui     routines ============
 // ==================================
 
 void draw_gui()
 {
+    tft.fillScreen(ILI9341_BLACK);
     draw_grid();
     draw_scale();
+    draw_scale_min_max();
     draw_button_dual();
     draw_button_interpolation();
     draw_value_center();
@@ -245,15 +244,14 @@ void draw_grid()
     tft.drawLine(257, 0, 257, 240, ILI9341_WHITE);
     // dividers for buttons below image
     tft.drawLine( 65, 193,  65, 240, ILI9341_WHITE);
-    tft.drawLine(129, 193, 129, 240, ILI9341_WHITE);
-    tft.drawLine(193, 193, 193, 240, ILI9341_WHITE);
+    tft.drawLine(140, 193, 140, 240, ILI9341_WHITE);
 }
 
 void draw_scale()
 {
     for (int i = 0; i < 128; i++)
     {
-        tft.drawLine(258, 180 - i, 278, 180 - i, colormap[mode_colormap][2*i]);
+        tft.drawLine(259, 150 - i, 279, 150 - i, colormap[mode_colormap][2*i]);
     }
 }
 
@@ -268,105 +266,209 @@ void draw_button_dual()
         tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
     }
 
-    tft.setCursor(3, 216);
-    tft.setTextSize(10);
+    tft.setCursor(1, 200);
+    tft.setTextSize(2);
     tft.print("DUAL");    
 }
 
 void draw_button_interpolation()
 {
-    tft.setCursor(68, 216);
-    tft.setTextSize(10);
+    tft.setCursor(1, 225);
+    tft.setTextSize(2);
 
     if (mode_interp == 1) // linear interpolation
     {
         tft.setTextColor(ILI9341_BLACK, ILI9341_GREEN);
-        tft.print("INTERP 1");
+        tft.print("INT 1");
     }
     else // no interpolation
     {
         tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-        tft.print("INTERP 0");
+        tft.print("INT 0");
     }    
 }
 
 void draw_value_center()
 {
     tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-    tft.setCursor(150, 200);
-    tft.setTextSize(10);
-    tft.print("+");    
+    tft.setCursor(145, 200);
+    tft.setTextSize(2);
+    tft.print("+ ");
+
+    tft.setCursor(160, 200);
+    char tmp[5];
+    dtostrf(T_center,5,1,tmp);
+    tft.print(tmp);    
 }
 
 void draw_value_hotspot()
 {
     tft.setTextColor(ILI9341_RED, ILI9341_BLACK);
-    tft.setCursor(150, 220);
-    tft.setTextSize(10);
-    tft.print("o");    
+    tft.setCursor(145, 220);
+    tft.setTextSize(2);
+    tft.print("o ");
+
+    tft.setCursor(160, 220);
+    char tmp[5];
+    dtostrf(T_max,5,1,tmp);
+    tft.print(tmp);     
 }
 
 void draw_unit()
 {
     tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-    if (mode_unit = 0) // temperature degree Celsius
+    tft.setTextSize(1);
+    tft.setCursor(235, 203);
+    tft.print("o");
+    if (mode_unit == 0) // temperature degree Celsius
     {
-        tft.setTextSize(10);
-        tft.setCursor(195, 216);
-        tft.print("°C");
+        tft.setTextSize(2);
+        tft.setCursor(242, 210);
+        tft.print("C");
     }
-    else if (mode_unit = 1) // temperature degree Fahrenheit
+    else if (mode_unit == 1) // temperature degree Fahrenheit
     {
-        tft.setTextSize(10);
-        tft.setCursor(195, 216);
-        tft.print("°F");
+        tft.setTextSize(2);
+        tft.setCursor(242, 210);
+        tft.print("F");
     }
 }
 
 void draw_scale_mode()
 {
+    tft.fillRect(290, 24, 320, 130, ILI9341_BLACK);
     tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-    tft.setTextSize(10);
-    tft.setCursor(260, 216);
+    tft.setTextSize(2);
+    tft.setCursor(295, 60);
     if (mode_auto_scale) // automatic scaling
     {
-        tft.print("auto");
-        tft.fillRect(290, 2, 310, 187, ILI9341_BLACK);
+        tft.print("a");
+        tft.setCursor(295, 73);
+        tft.print("u");
+        tft.setCursor(295, 86);
+        tft.print("t");
+        tft.setCursor(295, 99);
+        tft.print("o");
     }
     else
     {
-        tft.print("man.");
+        tft.print("m");
+        tft.setCursor(295, 73);
+        tft.print("a");
+        tft.setCursor(295, 86);
+        tft.print("n");
+        tft.setCursor(295, 99);
+        tft.print(".");
+        
         // ^ symbol at max. value
-        tft.drawLine(290, 7, 300, 2, ILI9341_WHITE);
-        tft.drawLine(300, 2, 310, 7, ILI9341_WHITE);
+        tft.drawLine(290, 34, 300, 24, ILI9341_WHITE);
+        tft.drawLine(300, 24, 310, 34, ILI9341_WHITE);
         // v symbol at max. value
-        tft.drawLine(290, 12, 300, 17, ILI9341_WHITE);
-        tft.drawLine(300, 17, 310, 12, ILI9341_WHITE);
+        tft.drawLine(290, 39, 300, 49, ILI9341_WHITE);
+        tft.drawLine(300, 49, 310, 39, ILI9341_WHITE);
         // ^ symbol at min. value
-        tft.drawLine(290, 177, 300, 172, ILI9341_WHITE);
-        tft.drawLine(300, 172, 310, 177, ILI9341_WHITE);
+        tft.drawLine(290, 135, 300, 125, ILI9341_WHITE);
+        tft.drawLine(300, 125, 310, 135, ILI9341_WHITE);
         // v symbol at min. value
-        tft.drawLine(290, 182, 300, 187, ILI9341_WHITE);
-        tft.drawLine(300, 187, 310, 182, ILI9341_WHITE);
+        tft.drawLine(290, 140, 300, 150, ILI9341_WHITE);
+        tft.drawLine(300, 150, 310, 140, ILI9341_WHITE);
     }
+}
+
+void draw_scale_min_max()
+{
+    tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+    tft.setTextSize(2);
+
+    // max value
+    tft.setCursor(260, 1);
+    char tmp[3];
+    dtostrf(T_max,3,0,tmp);
+    tft.print(tmp);
+
+    // min value
+    tft.setCursor(260, 157);
+    dtostrf(T_min,3,0,tmp);
+    tft.print(tmp);
+}
+
+void draw_fps()
+{
+    tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+    tft.setTextSize(1);
+    
+    tft.setCursor(270, 225);
+    char tmp[3];
+    dtostrf(fps_value,3,0,tmp);
+    tft.print(tmp);
+
+    tft.setCursor(300, 225);
+    tft.print("fps");
+}
+
+void draw_crosshair()
+{
+    // draw white crosshair in center
+    tft.drawLine(128, 93, 128, 100, ILI9341_WHITE);
+    tft.drawLine(129, 93, 129, 100, ILI9341_WHITE);
+    tft.drawLine(125, 96, 132,  96, ILI9341_WHITE);
+    tft.drawLine(125, 97, 132,  97, ILI9341_WHITE);
+}
+
+// ==================================
+// ==== post processing =============
+// ==================================
+
+void PP_not_interpolated()
+{
+
+  /* With 1D field
+   *  
+   */
+
+   T_center = 0.25 * (mlx90640To[11*32+15] + mlx90640To[11*32+16] + mlx90640To[12*32+15] + mlx90640To[12*32+15]);
+   for (int i = 0; i < 24 ; i++)
+    {
+        for (int j = 0; j < 32; j++)
+        {
+            int magnitude = (int) 256.0 * (mlx90640To[i*32+j] - T_min)/(T_max - T_min);
+            tft.fillRect(j*8, i*8, 8, 8, colormap[mode_colormap][magnitude]);
+        }
+    }
+
+  /* With 2D field
+    T_center = 0.25 * (T[16][12] + T[17][12] + T[16][13] + T[17][13]); 
+
+    for (int i = 0; i < 24 ; i++)
+    {
+        for (int j = 0; j < 32; j++)
+        {
+            int magnitude = (int) 256.0 * (T[i][j] - T_min)/(T_max - T_min);
+            tft.fillRect(j*8, i*8, 8, 8, colormap[mode_colormap][magnitude])
+        }
+    }
+  */
 }
 
 // ==================================
 // ==== search / sort functions =====
 // ==================================
 
-// ToDo: Anpassen auf 2D Array und auch den Index mit rausgeben
+void find_T_minmax()
+{
+    T_max = -273.15;
+    T_min = 4000.00;
 
-// find maximum value in array
-template <typename T, size_t size> T maximum(const T (&arr)[size]) {
-  T maxValue {arr[0]};
-  for (auto &value : arr) maxValue = max(maxValue, value);
-  return maxValue;
-}
-
-// find minimum value in array
-template <typename T, size_t size> T minimum(const T (&arr)[size]) {
-  T minValue {arr[0]};
-  for (auto &value : arr) minValue = min(minValue, value);
-  return minValue;
+    for (int i=0; i<768; i++)
+    {
+      T_probe = mlx90640To[i];
+      if (T_probe > T_max)
+      {
+        T_max = T_probe;
+      }
+      if (T_probe < T_min)
+      {
+        T_min = T_probe;
+      }
+    }
 }
