@@ -14,26 +14,11 @@
 // ==================================
 #include <Arduino.h>
 #include <Wire.h>
+#include <TFT_eSPI.h>
 #include "SPI.h"
-
-// ==== tft display related =========
 #include "Adafruit_GFX.h"
-#include "Adafruit_ILI9341.h"
 
-#define TFT_LED   1
-// USE VSPI pins via hardware SPI
-#define TFT_CS   17 
-#define TFT_DC   16
-#define TFT_RST   5
-
-#define TFT_MOSI 23 // just for reference, this variable is not used
-#define TFT_CLK  18 // just for reference, this variable is not used
-#define TFT_MISO 19 // just for reference, this variable is not used
-
-// Use hardware SPI
-// CS, DC and RST can be chosen freely. 
-// The hardware SPI pins (VSPI) are known by the Arduino IDE.
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
+TFT_eSPI tft = TFT_eSPI();
 
 // colormap array
 #include "colormaps.h"
@@ -69,6 +54,7 @@ int  mode_interp = 0;
 int  mode_unit = 0;
 bool mode_auto_scale = true;
 int  mode_colormap = 0;
+bool mode_fullscreen = false;
 
 // important temperature readings
 float T_max = 0.0;
@@ -124,9 +110,10 @@ void setup()
     MLX90640_SetRefreshRate(MLX90640_address, mlx_refreshRate);
 
     // initialize TFT display
-    pinMode(TFT_LED, OUTPUT);
-    digitalWrite(TFT_LED, HIGH);
-    tft.begin();
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH);
+
+    tft.init();
     tft.setRotation(3);
 
     // draw the default GUI
@@ -224,7 +211,7 @@ boolean isConnected()
 
 void draw_gui()
 {
-    tft.fillScreen(ILI9341_BLACK);
+    tft.fillScreen(TFT_BLACK);
     draw_grid();
     draw_scale();
     draw_scale_min_max();
@@ -239,12 +226,12 @@ void draw_gui()
 void draw_grid()
 {
     // horizontal line below image
-    tft.drawLine(0, 193, 320, 193, ILI9341_WHITE);
+    tft.drawLine(0, 193, 320, 193, TFT_WHITE);
     // vertical line to the right of the image
-    tft.drawLine(257, 0, 257, 240, ILI9341_WHITE);
+    tft.drawLine(257, 0, 257, 240, TFT_WHITE);
     // dividers for buttons below image
-    tft.drawLine( 65, 193,  65, 240, ILI9341_WHITE);
-    tft.drawLine(140, 193, 140, 240, ILI9341_WHITE);
+    tft.drawLine( 65, 193,  65, 240, TFT_WHITE);
+    tft.drawLine(140, 193, 140, 240, TFT_WHITE);
 }
 
 void draw_scale()
@@ -259,160 +246,137 @@ void draw_button_dual()
 {
     if (mode_dual)
     {
-        tft.setTextColor(ILI9341_BLACK, ILI9341_GREEN);
+        tft.setTextColor(TFT_BLACK, TFT_GREEN);
     }
     else
     {
-        tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
     }
 
-    tft.setCursor(1, 200);
-    tft.setTextSize(2);
-    tft.print("DUAL");    
+    tft.drawString("DUAL", 1, 200, 2); 
 }
 
 void draw_button_interpolation()
 {
-    tft.setCursor(1, 225);
-    tft.setTextSize(2);
-
     if (mode_interp == 1) // linear interpolation
     {
-        tft.setTextColor(ILI9341_BLACK, ILI9341_GREEN);
-        tft.print("INT 1");
+        tft.setTextColor(TFT_BLACK, TFT_GREEN);
+        tft.drawString("INT 1", 1, 255, 2);
     }
     else // no interpolation
     {
-        tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-        tft.print("INT 0");
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        tft.drawString("INT 0", 1, 255, 2);
     }    
 }
 
 void draw_value_center()
 {
-    tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-    tft.setCursor(145, 200);
-    tft.setTextSize(2);
-    tft.print("+ ");
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.drawString("+ ", 145, 200, 2);
 
-    tft.setCursor(160, 200);
     char tmp[5];
     dtostrf(T_center,5,1,tmp);
-    tft.print(tmp);    
+    tft.drawString(tmp, 160, 200, 2);  
 }
 
 void draw_value_hotspot()
 {
-    tft.setTextColor(ILI9341_RED, ILI9341_BLACK);
-    tft.setCursor(145, 220);
-    tft.setTextSize(2);
-    tft.print("o ");
+    tft.setTextColor(TFT_RED, TFT_BLACK);
+    tft.drawString("o ", 145, 220, 2);
 
-    tft.setCursor(160, 220);
     char tmp[5];
     dtostrf(T_max,5,1,tmp);
-    tft.print(tmp);     
+    tft.drawString(tmp, 160, 220, 2);  
 }
 
 void draw_unit()
 {
-    tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-    tft.setTextSize(1);
-    tft.setCursor(235, 203);
-    tft.print("o");
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
     if (mode_unit == 0) // temperature degree Celsius
     {
-        tft.setTextSize(2);
-        tft.setCursor(242, 210);
-        tft.print("C");
+        tft.drawString("o", 235, 203, 1); // degree symbol
+        tft.drawString("C", 242, 210, 2); 
     }
     else if (mode_unit == 1) // temperature degree Fahrenheit
     {
-        tft.setTextSize(2);
-        tft.setCursor(242, 210);
-        tft.print("F");
+        tft.drawString("o", 235, 203, 1); // degree symbol
+        tft.drawString("F", 242, 210, 2); 
     }
 }
 
 void draw_scale_mode()
 {
-    tft.fillRect(290, 24, 320, 130, ILI9341_BLACK);
-    tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-    tft.setTextSize(2);
-    tft.setCursor(295, 60);
+    tft.fillRect(290, 24, 320, 130, TFT_BLACK);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
     if (mode_auto_scale) // automatic scaling
     {
-        tft.print("a");
-        tft.setCursor(295, 73);
-        tft.print("u");
-        tft.setCursor(295, 86);
-        tft.print("t");
-        tft.setCursor(295, 99);
-        tft.print("o");
+        tft.drawString("a", 295, 60, 2);
+        tft.drawString("u", 295, 73, 2);
+        tft.drawString("t", 295, 86, 2);
+        tft.drawString("o", 295, 99, 2);
     }
     else
     {
-        tft.print("m");
-        tft.setCursor(295, 73);
-        tft.print("a");
-        tft.setCursor(295, 86);
-        tft.print("n");
-        tft.setCursor(295, 99);
-        tft.print(".");
+        tft.drawString("m", 295, 60, 2);
+        tft.drawString("a", 295, 73, 2);
+        tft.drawString("n", 295, 86, 2);
+        tft.drawString(".", 295, 99, 2);
         
         // ^ symbol at max. value
-        tft.drawLine(290, 34, 300, 24, ILI9341_WHITE);
-        tft.drawLine(300, 24, 310, 34, ILI9341_WHITE);
+        tft.drawLine(290, 34, 300, 24, TFT_WHITE);
+        tft.drawLine(300, 24, 310, 34, TFT_WHITE);
         // v symbol at max. value
-        tft.drawLine(290, 39, 300, 49, ILI9341_WHITE);
-        tft.drawLine(300, 49, 310, 39, ILI9341_WHITE);
+        tft.drawLine(290, 39, 300, 49, TFT_WHITE);
+        tft.drawLine(300, 49, 310, 39, TFT_WHITE);
         // ^ symbol at min. value
-        tft.drawLine(290, 135, 300, 125, ILI9341_WHITE);
-        tft.drawLine(300, 125, 310, 135, ILI9341_WHITE);
+        tft.drawLine(290, 135, 300, 125, TFT_WHITE);
+        tft.drawLine(300, 125, 310, 135, TFT_WHITE);
         // v symbol at min. value
-        tft.drawLine(290, 140, 300, 150, ILI9341_WHITE);
-        tft.drawLine(300, 150, 310, 140, ILI9341_WHITE);
+        tft.drawLine(290, 140, 300, 150, TFT_WHITE);
+        tft.drawLine(300, 150, 310, 140, TFT_WHITE);
     }
 }
 
 void draw_scale_min_max()
 {
-    tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-    tft.setTextSize(2);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
     // max value
-    tft.setCursor(260, 1);
     char tmp[3];
     dtostrf(T_max,3,0,tmp);
-    tft.print(tmp);
+    tft.drawString(tmp, 260, 1, 2);
 
     // min value
-    tft.setCursor(260, 157);
     dtostrf(T_min,3,0,tmp);
-    tft.print(tmp);
+    tft.drawString(tmp, 260, 157, 2);
 }
 
 void draw_fps()
 {
-    tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-    tft.setTextSize(1);
-    
-    tft.setCursor(270, 225);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
     char tmp[3];
     dtostrf(fps_value,3,0,tmp);
-    tft.print(tmp);
-
-    tft.setCursor(300, 225);
-    tft.print("fps");
+    tft.drawString(tmp, 270, 225, 1);
+    tft.drawString("fps", 300, 225, 1);
 }
 
 void draw_crosshair()
 {
-    // draw white crosshair in center
-    tft.drawLine(128, 93, 128, 100, ILI9341_WHITE);
-    tft.drawLine(129, 93, 129, 100, ILI9341_WHITE);
-    tft.drawLine(125, 96, 132,  96, ILI9341_WHITE);
-    tft.drawLine(125, 97, 132,  97, ILI9341_WHITE);
+    if (mode_fullscreen)
+    {
+      tft.drawLine(160, 117, 160, 124, TFT_WHITE);
+      tft.drawLine(161, 117, 161, 124, TFT_WHITE);
+      tft.drawLine(157, 120, 164, 120, TFT_WHITE);
+      tft.drawLine(157, 121, 164, 121, TFT_WHITE);
+    }
+    else
+    {
+      tft.drawLine(128, 93, 128, 100, TFT_WHITE);
+      tft.drawLine(129, 93, 129, 100, TFT_WHITE);
+      tft.drawLine(125, 96, 132,  96, TFT_WHITE);
+      tft.drawLine(125, 97, 132,  97, TFT_WHITE);
+    }   
 }
 
 // ==================================
